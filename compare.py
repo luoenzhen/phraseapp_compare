@@ -4,6 +4,7 @@
 from subprocess import check_output
 import pprint
 import json
+import ast
 
 pp = pprint.PrettyPrinter(indent=2)
 
@@ -41,39 +42,35 @@ def app_compare():
     pp.pprint(key_result)
 
 def parse_block(lines):
-    result_list = []
-    i = 0
-    while i < len(lines) - 1:
+    result = '{'
+    for i in range(0, len(lines)):
         line = lines[i].strip()
-        # print(str(i+1)+'\t'+line)
-        if line and not any(line.startswith(txt) for txt in ['return [', '<?php', '/*', '|', '*/']) and '=>' in line:
-            if line.endswith('['):
-                block_list = []
-                block_list.append(line.split(' => ')[0].strip('\''))
-                sub_block_list = []
-                for j in range(i+1, len(lines)):
-                    block_line = lines[j].strip()
-                    if block_line and not any(block_line.startswith(txt) for txt in ['return [', '<?php', '/*', '|', '*']) and '=>' in block_line:
-                        sub_block_list.append(block_line.split(' => ')[0].strip('\''))
-                    if block_line and block_line.startswith(']'):
-                        i = j
-                        block_list.append(sub_block_list)
-                        break
-                result_list.append(block_list)
+        if line and not any(line.startswith(txt) for txt in ['return [', '<?php', '/*', '|', '*/', '//']):
+            if '=>' in line:
+                if line.endswith('['):
+                    result += '\'' + line.split('=>')[0].strip().lstrip('\'').rstrip(',').rstrip('\'') + '\': {'
+                else:
+                    if 'date' in line:
+                        result += '\'' + line.split('=>')[0].strip().lstrip('\'').rstrip(',').rstrip('\'') + '\'' + ': \'' + line.split('=>')[1].split('.')[0].strip().lstrip('\'').rstrip(',').rstrip('\'') + '\', '
+                    else:
+                        result += '\'' + line.split('=>')[0].strip().lstrip('\'').rstrip(',').rstrip('\'') + '\'' + ': \'' + line.split('=>')[1].strip().lstrip('\'').rstrip(',').rstrip('\'') + '\', '
+            elif line.startswith(']'):
+                    result += '},'
             else:
-                # print(line)
-                result_list.append(line.split(' => ')[0].strip('\''))
-        i += 1
-    return result_list
+                print('what else [' + str(i +1) + ']:\t' + line)
 
-def generate_web_key_list(filename, result_list):
+    return result
+
+def generate_web_dict(filename):
+    result = {}
     with open(filename) as f:
         lines = f.readlines()
-        result_list = parse_block(lines)
-    pp.pprint(result_list)
+    result = ast.literal_eval(parse_block(lines)[:-1])
+    # print(type(result))
+    pprint.pprint(result)
     f.close()
 
-generate_web_key_list(LOCAL_WEB_FILE, local_web_key_list)
+generate_web_dict(LOCAL_WEB_FILE)
 
 def ordering_compare():
     print('ordering')
